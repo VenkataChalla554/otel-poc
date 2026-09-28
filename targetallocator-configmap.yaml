@@ -1,0 +1,28 @@
+{{- include "hawk-opentelemetry.validate" . }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "hawk-opentelemetry.targetallocator.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "hawk-opentelemetry.targetallocator.labels" . | nindent 4 }}
+data:
+  targetallocator.yaml: |
+    listen_addr: ":{{ .Values.targetAllocator.service.port }}"
+    collector_namespace: {{ .Release.Namespace | quote }}
+    collector_selector:
+      matchlabels:
+        {{- include "hawk-opentelemetry.collector.selectorLabels" . | nindent 8 }}
+    allocation_strategy: {{ .Values.targetAllocator.allocationStrategy }}
+    filter_strategy: {{ .Values.targetAllocator.filterStrategy }}
+    prometheus_cr:
+      enabled: true
+      scrape_interval: {{ .Values.targetAllocator.scrapeInterval }}
+      allow_namespaces:
+        {{- range .Values.allowedNamespaces }}
+        - {{ . | quote }}
+        {{- end }}
+      service_monitor_selector: {}
+      pod_monitor_selector: {}
+    config:
+      scrape_configs: []

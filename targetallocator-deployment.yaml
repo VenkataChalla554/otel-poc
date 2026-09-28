@@ -1,0 +1,56 @@
+{{- include "hawk-opentelemetry.validate" . }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "hawk-opentelemetry.targetallocator.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "hawk-opentelemetry.targetallocator.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.targetAllocator.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "hawk-opentelemetry.targetallocator.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "hawk-opentelemetry.targetallocator.selectorLabels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "hawk-opentelemetry.serviceAccountName" . }}
+      automountServiceAccountToken: true
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: target-allocator
+          image: "{{ .Values.targetAllocator.image.repository }}:{{ .Values.targetAllocator.image.tag }}"
+          imagePullPolicy: {{ .Values.targetAllocator.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.targetAllocator.service.port }}
+              protocol: TCP
+          env:
+            - name: OTELCOL_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          livenessProbe:
+            httpGet:
+              path: /livez
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          volumeMounts:
+            - name: config
+              mountPath: /conf
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "hawk-opentelemetry.targetallocator.fullname" . }}

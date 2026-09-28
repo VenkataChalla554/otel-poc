@@ -1,0 +1,7 @@
+HAWK OpenTelemetry POC installed in {{ .Release.Namespace }}.
+
+Collector: {{ include "hawk-opentelemetry.collector.fullname" . }}
+Target Allocator: {{ include "hawk-opentelemetry.targetallocator.fullname" . }}
+ServiceAccount: {{ include "hawk-opentelemetry.serviceAccountName" . }}
+
+Set dynatrace.endpoint and create Secret {{ .Values.dynatrace.secretName }} before expecting metrics in Dynatrace.

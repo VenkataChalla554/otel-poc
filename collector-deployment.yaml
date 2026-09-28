@@ -1,0 +1,63 @@
+{{- include "hawk-opentelemetry.validate" . }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "hawk-opentelemetry.collector.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "hawk-opentelemetry.collector.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.collector.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "hawk-opentelemetry.collector.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "hawk-opentelemetry.collector.selectorLabels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "hawk-opentelemetry.serviceAccountName" . }}
+      automountServiceAccountToken: true
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: otel-collector
+          image: "{{ .Values.collector.image.repository }}:{{ .Values.collector.image.tag }}"
+          imagePullPolicy: {{ .Values.collector.image.pullPolicy }}
+          args:
+            - --config=/conf/collector.yaml
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          ports:
+            - name: health
+              containerPort: {{ .Values.collector.service.port }}
+              protocol: TCP
+          env:
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: DT_API_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.dynatrace.secretName }}
+                  key: {{ .Values.dynatrace.secretKey }}
+          livenessProbe:
+            httpGet:
+              path: /
+              port: health
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /
+              port: health
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          volumeMounts:
+            - name: config
+              mountPath: /conf
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "hawk-opentelemetry.collector.fullname" . }}

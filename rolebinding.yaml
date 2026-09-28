@@ -1,0 +1,20 @@
+{{- include "hawk-opentelemetry.validate" . }}
+{{- $saName := include "hawk-opentelemetry.serviceAccountName" . }}
+{{- range .Values.allowedNamespaces }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ $saName }}
+  namespace: {{ . }}
+  labels:
+    {{- include "hawk-opentelemetry.labels" $ | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ $saName }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ $saName }}
+    namespace: {{ $.Release.Namespace }}
+{{- end }}

@@ -1,0 +1,7 @@
+apiVersion: v2
+name: hawk-opentelemetry
+description: POC chart for the OpenTelemetry Collector and Target Allocator without the OpenTelemetry Operator
+type: application
+version: 0.1.0
+appVersion: "0.160.0"
+kubeVersion: ">=1.24.0-0"

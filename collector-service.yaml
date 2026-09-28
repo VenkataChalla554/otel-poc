@@ -1,0 +1,16 @@
+{{- include "hawk-opentelemetry.validate" . }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "hawk-opentelemetry.collector.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "hawk-opentelemetry.collector.labels" . | nindent 4 }}
+spec:
+  selector:
+    {{- include "hawk-opentelemetry.collector.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: health
+      port: {{ .Values.collector.service.port }}
+      targetPort: health
+      protocol: TCP

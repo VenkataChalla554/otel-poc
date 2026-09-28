@@ -1,0 +1,40 @@
+{{- include "hawk-opentelemetry.validate" . }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "hawk-opentelemetry.collector.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "hawk-opentelemetry.collector.labels" . | nindent 4 }}
+data:
+  collector.yaml: |
+    receivers:
+      prometheus:
+        target_allocator:
+          endpoint: http://{{ include "hawk-opentelemetry.targetallocator.fullname" . }}:{{ .Values.targetAllocator.service.port }}
+          interval: {{ .Values.collector.scrapeInterval }}
+          collector_id: ${env:POD_NAME}
+
+    processors:
+      # Required so Dynatrace can ingest cumulative Prometheus metrics.
+      metricstarttime: {}
+      cumulativetodelta: {}
+      batch: {}
+
+    exporters:
+      otlphttp/dynatrace:
+        endpoint: {{ .Values.dynatrace.endpoint | quote }}
+        headers:
+          Authorization: "Api-Token ${env:DT_API_TOKEN}"
+
+    extensions:
+      health_check:
+        endpoint: 0.0.0.0:{{ .Values.collector.service.port }}
+
+    service:
+      extensions: [health_check]
+      pipelines:
+        metrics:
+          receivers: [prometheus]
+          processors: [metricstarttime, cumulativetodelta, batch]
+          exporters: [otlphttp/dynatrace]

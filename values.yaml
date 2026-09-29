@@ -29,11 +29,23 @@ dynatrace:
   secretKey: DT_API_TOKEN
   endpoint: "https://<environment-id>.live.dynatrace.com/api/v2/otlp"
 
+# Allows the Collector and Target Allocator to reach pods in allowedNamespaces.
+# An Ingress policy is created in each of those namespaces. An Egress policy is
+# created for the Collector and Target Allocator pods in the release namespace.
+networkPolicy:
+  enabled: true
+  # Pods that may be scraped. {} is every pod in the namespace.
+  podSelector: {}
+
+# Optional pull secret when the images are in a private registry.
+imagePullSecrets: []
+# - name: registry-credentials
+
 collector:
   replicaCount: 1
   image:
     repository: otel/opentelemetry-collector-contrib
-    tag: "0.160.0"
+    version: "0.160.0"
     pullPolicy: IfNotPresent
   service:
     port: 13133
@@ -43,7 +55,7 @@ targetAllocator:
   replicaCount: 1
   image:
     repository: ghcr.io/open-telemetry/opentelemetry-operator/target-allocator
-    tag: "0.159.0"
+    version: "0.159.0"
     pullPolicy: IfNotPresent
   service:
     port: 8080

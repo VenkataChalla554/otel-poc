@@ -1,0 +1,89 @@
+{{- if .Values.networkPolicy.enabled }}
+{{- $root := . }}
+{{- range $ns := .Values.allowedNamespaces }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "hawk-opentelemetry.fullname" $root }}-scrape
+  namespace: {{ $ns }}
+  labels:
+    {{- include "hawk-opentelemetry.labels" $root | nindent 4 }}
+spec:
+  podSelector:
+    {{- toYaml $root.Values.networkPolicy.podSelector | nindent 4 }}
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: {{ $root.Release.Namespace }}
+          podSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/name
+                operator: In
+                values:
+                  - {{ include "hawk-opentelemetry.name" $root }}
+              - key: app.kubernetes.io/instance
+                operator: In
+                values:
+                  - {{ $root.Release.Name }}
+              - key: app.kubernetes.io/component
+                operator: In
+                values:
+                  - opentelemetry-collector
+                  - opentelemetry-target-allocator
+{{- if eq $ns $root.Release.Namespace }}
+    - ports:
+        - protocol: TCP
+          port: {{ $root.Values.collector.service.port }}
+        - protocol: TCP
+          port: {{ $root.Values.targetAllocator.service.port }}
+{{- end }}
+{{- end }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "hawk-opentelemetry.fullname" . }}-egress
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "hawk-opentelemetry.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app.kubernetes.io/name
+        operator: In
+        values:
+          - {{ include "hawk-opentelemetry.name" . }}
+      - key: app.kubernetes.io/instance
+        operator: In
+        values:
+          - {{ .Release.Name }}
+      - key: app.kubernetes.io/component
+        operator: In
+        values:
+          - opentelemetry-collector
+          - opentelemetry-target-allocator
+  policyTypes:
+    - Egress
+  egress:
+    - ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    - ports:
+        - protocol: TCP
+          port: 443
+    - to:
+        - namespaceSelector:
+            matchExpressions:
+              - key: kubernetes.io/metadata.name
+                operator: In
+                values:
+                  {{- range .Values.allowedNamespaces }}
+                  - {{ . | quote }}
+                  {{- end }}
+{{- end }}

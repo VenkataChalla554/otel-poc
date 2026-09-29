@@ -9,29 +9,64 @@ metadata:
   labels:
     {{- include "hawk-opentelemetry.labels" $ | nindent 4 }}
 rules:
-  - apiGroups:
-      - ""
+  - apiGroups: [""]
     resources:
-      - pods
-      - services
-      - endpoints
+      - namespaces
+    resourceNames:
+      - {{ . }}
     verbs:
       - get
       - list
       - watch
-  - apiGroups:
-      - discovery.k8s.io
+  - apiGroups: [""]
+    resources:
+      - pods
+      - services
+      - endpoints
+      - configmaps
+      - secrets
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups: ["discovery.k8s.io"]
     resources:
       - endpointslices
     verbs:
       - get
       - list
       - watch
-  - apiGroups:
-      - monitoring.coreos.com
+  - apiGroups: ["apps"]
+    resources:
+      - replicasets
+      - deployments
+      - statefulsets
+      - daemonsets
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups: ["batch"]
+    resources:
+      - jobs
+      - cronjobs
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups: ["networking.k8s.io"]
+    resources:
+      - ingresses
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups: ["monitoring.coreos.com"]
     resources:
       - servicemonitors
       - podmonitors
+      - scrapeconfigs
+      - probes
     verbs:
       - get
       - list

@@ -19,6 +19,11 @@ data:
       # Required so Dynatrace can ingest cumulative Prometheus metrics.
       metricstarttime: {}
       cumulativetodelta: {}
+      resource/dynatrace:
+        attributes:
+          - key: dt.security_context
+            value: {{ .Values.dynatrace.securityContext | quote }}
+            action: upsert
       batch: {}
 
     exporters:
@@ -39,5 +44,5 @@ data:
       pipelines:
         metrics:
           receivers: [prometheus]
-          processors: [metricstarttime, cumulativetodelta, batch]
+          processors: [metricstarttime, cumulativetodelta, resource/dynatrace, batch]
           exporters: [otlphttp/dynatrace]

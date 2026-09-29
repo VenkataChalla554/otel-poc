@@ -8,6 +8,7 @@ serviceAccount:
 # Allocator can discover Collector pods.
 allowedNamespaces:
   - tenant-hawk-hawk-test
+  - tenant-hawk-hawk-redis
 
 # Applied to both Collector and Target Allocator pods.
 podSecurityContext:
@@ -28,6 +29,11 @@ dynatrace:
   secretName: dynatrace-otel-token
   secretKey: DT_API_TOKEN
   endpoint: "https://<environment-id>.live.dynatrace.com/api/v2/otlp"
+  tls:
+    # insecure disables TLS. Use this only for an http:// ActiveGate endpoint.
+    insecure: false
+    # Skip certificate verification for an ActiveGate or Dynatrace HTTPS endpoint.
+    insecureSkipVerify: true
 
 # Allows the Collector and Target Allocator to reach pods in allowedNamespaces.
 # An Ingress policy is created in each of those namespaces. An Egress policy is

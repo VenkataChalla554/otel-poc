@@ -77,6 +77,8 @@ spec:
     - ports:
         - protocol: TCP
           port: 443
+        - protocol: TCP
+          port: 9999
     - to:
         - namespaceSelector:
             matchExpressions:

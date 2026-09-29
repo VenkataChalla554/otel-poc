@@ -1,4 +1,4 @@
-# HAWK OpenTelemetry POC
+# OpenTelemetry POC
 
 Deploys an OpenTelemetry Collector and Target Allocator as plain Kubernetes Deployments in `tenant-hawk-hawk-test`. No OpenTelemetry Operator, OpenTelemetry CRDs, ClusterRole, or ClusterRoleBinding.
 

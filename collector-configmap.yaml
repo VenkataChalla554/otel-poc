@@ -19,11 +19,66 @@ data:
       # Required so Dynatrace can ingest cumulative Prometheus metrics.
       metricstarttime: {}
       cumulativetodelta: {}
+      # Copy Prometheus scrape labels onto the resource so Dynatrace shows the
+      # same dimensions as the existing HAWK metrics.
+      transform/promote:
+        error_mode: ignore
+        metric_statements:
+          - context: datapoint
+            statements:
+              - set(resource.attributes["k8s.namespace.name"], attributes["namespace"]) where attributes["namespace"] != nil
+              - set(resource.attributes["k8s.pod.name"], attributes["pod"]) where attributes["pod"] != nil
+              - set(resource.attributes["k8s.container.name"], attributes["container"]) where attributes["container"] != nil
+              - set(resource.attributes["service.name"], attributes["service"]) where attributes["service"] != nil
+{{- range .Values.allowedNamespaces }}
+      k8sattributes/{{ . }}:
+        auth_type: serviceAccount
+        passthrough: false
+        filter:
+          namespace: {{ . | quote }}
+        extract:
+          metadata:
+            - k8s.namespace.name
+            - k8s.pod.name
+            - k8s.pod.uid
+            - k8s.node.name
+            - k8s.container.name
+            - k8s.statefulset.name
+            - k8s.deployment.name
+            - k8s.daemonset.name
+            - k8s.job.name
+            - k8s.cronjob.name
+            - k8s.replicaset.name
+        pod_association:
+          - sources:
+              - from: resource_attribute
+                name: k8s.namespace.name
+              - from: resource_attribute
+                name: k8s.pod.name
+{{- end }}
+      transform/workload:
+        error_mode: ignore
+        metric_statements:
+          - context: resource
+            statements:
+              - set(attributes["k8s.workload.kind"], "statefulset") where attributes["k8s.statefulset.name"] != nil
+              - set(attributes["k8s.workload.name"], attributes["k8s.statefulset.name"]) where attributes["k8s.statefulset.name"] != nil
+              - set(attributes["k8s.workload.kind"], "daemonset") where attributes["k8s.daemonset.name"] != nil and attributes["k8s.workload.name"] == nil
+              - set(attributes["k8s.workload.name"], attributes["k8s.daemonset.name"]) where attributes["k8s.daemonset.name"] != nil and attributes["k8s.workload.name"] == nil
+              - set(attributes["k8s.workload.kind"], "deployment") where attributes["k8s.deployment.name"] != nil and attributes["k8s.workload.name"] == nil
+              - set(attributes["k8s.workload.name"], attributes["k8s.deployment.name"]) where attributes["k8s.deployment.name"] != nil and attributes["k8s.workload.name"] == nil
+              - set(attributes["k8s.workload.kind"], "job") where attributes["k8s.job.name"] != nil and attributes["k8s.workload.name"] == nil
+              - set(attributes["k8s.workload.name"], attributes["k8s.job.name"]) where attributes["k8s.job.name"] != nil and attributes["k8s.workload.name"] == nil
       resource/dynatrace:
         attributes:
           - key: dt.security_context
             value: {{ .Values.dynatrace.securityContext | quote }}
             action: upsert
+          {{- range $key, $value := .Values.dynatrace.resourceAttributes }}
+          - key: {{ $key | quote }}
+            value: {{ $value | quote }}
+            action: upsert
+          {{- end }}
       batch: {}
 
     exporters:
@@ -44,5 +99,14 @@ data:
       pipelines:
         metrics:
           receivers: [prometheus]
-          processors: [metricstarttime, cumulativetodelta, resource/dynatrace, batch]
+          processors:
+            - metricstarttime
+            - cumulativetodelta
+            - transform/promote
+            {{- range .Values.allowedNamespaces }}
+            - k8sattributes/{{ . }}
+            {{- end }}
+            - transform/workload
+            - resource/dynatrace
+            - batch
           exporters: [otlphttp/dynatrace]

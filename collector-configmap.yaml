@@ -26,6 +26,9 @@ data:
         endpoint: {{ .Values.dynatrace.endpoint | quote }}
         headers:
           Authorization: "Api-Token ${env:DT_API_TOKEN}"
+        tls:
+          insecure: {{ .Values.dynatrace.tls.insecure }}
+          insecure_skip_verify: {{ .Values.dynatrace.tls.insecureSkipVerify }}
 
     extensions:
       health_check:
